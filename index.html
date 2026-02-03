@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVA Web OS - MVP</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-window: #1e293b;
+            --accent: #38bdf8;
+            --text: #f1f5f9;
+            --border: #334155;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Desktop Shell */
+        #desktop {
+            width: 100vw; height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* Top Bar */
+        #top-bar {
+            height: 40px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        /* Left Dock */
+        #dock {
+            position: absolute;
+            left: 10px; top: 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .dock-icon {
+            width: 50px; height: 50px;
+            background: var(--bg-window);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            font-size: 20px;
+        }
+
+        .dock-icon:hover {
+            transform: scale(1.1);
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        /* Windows */
+        .window {
+            position: absolute;
+            width: 600px; height: 400px;
+            background: var(--bg-window);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            resize: both;
+            overflow: auto;
+            min-width: 300px; min-height: 200px;
+        }
+
+        .window-header {
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .window-body {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .close-btn { cursor: pointer; color: #ef4444; }
+
+        /* Tables & Content */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); }
+        .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
+        
+        button {
+            background: var(--accent); border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="desktop">
+    <div id="top-bar">
+        <div id="company-name"><strong>NEXUS</strong> OS</div>
+        <div id="clock">00:00:00</div>
+        <div>
+            <button onclick="openWindow('win-tasks')">+ Task</button>
+        </div>
+    </div>
+
+    <div id="dock">
+        <div class="dock-icon" onclick="openWindow('win-dash')" title="Dashboard">🏠</div>
+        <div class="dock-icon" onclick="openWindow('win-clients')" title="Clients">👥</div>
+        <div class="dock-icon" onclick="openWindow('win-employees')" title="Employees">🛠️</div>
+        <div class="dock-icon" onclick="openWindow('win-tasks')" title="Tasks">✅</div>
+        <div class="dock-icon" onclick="openWindow('win-time')" title="Time Logs">⏱️</div>
+        <div class="dock-icon" onclick="openWindow('win-reports')" title="Reports">📊</div>
+        <div class="dock-icon" onclick="openWindow('win-settings')" title="Settings">⚙️</div>
+    </div>
+
+    <div id="win-dash" class="window" style="top: 100px; left: 100px;">
+        <div class="window-header"><span>Dashboard</span><span class="close-btn" onclick="closeWin('win-dash')">✖</span></div>
+        <div class="window-body" id="dash-content"></div>
+    </div>
+
+    <div id="win-clients" class="window" style="top: 120px; left: 120px;">
+        <div class="window-header"><span>Client Manager</span><span class="close-btn" onclick="closeWin('win-clients')">✖</span></div>
+        <div class="window-body">
+            <button onclick="addClient()">+ New Client</button>
+            <table id="client-table"></table>
+        </div>
+    </div>
+
+    <div id="win-employees" class="window" style="top: 140px; left: 140px;">
+        <div class="window-header"><span>Employee Manager</span><span class="close-btn" onclick="closeWin('win-employees')">✖</span></div>
+        <div class="window-body"><table id="employee-table"></table></div>
+    </div>
+
+    <div id="win-tasks" class="window" style="top: 160px; left: 160px;">
+        <div class="window-header"><span>Task Manager</span><span class="close-btn" onclick="closeWin('win-tasks')">✖</span></div>
+        <div class="window-body"><table id="task-table"></table></div>
+    </div>
+
+    <div id="win-time" class="window" style="top: 180px; left: 180px;">
+        <div class="window-header"><span>Time Logs</span><span class="close-btn" onclick="closeWin('win-time')">✖</span></div>
+        <div class="window-body">
+            <div id="active-timer" style="margin-bottom: 20px; padding: 10px; background: #064e3b; border-radius: 5px;">
+                Status: Idle <button onclick="toggleTimer()">Start Working</button>
+            </div>
+            <table id="time-table"></table>
+        </div>
+    </div>
+
+    <div id="win-reports" class="window" style="top: 200px; left: 200px;">
+        <div class="window-header"><span>Reports</span><span class="close-btn" onclick="closeWin('win-reports')">✖</span></div>
+        <div class="window-body" id="reports-content"></div>
+    </div>
+
+    <div id="win-settings" class="window" style="top: 220px; left: 220px;">
+        <div class="window-header"><span>Settings</span><span class="close-btn" onclick="closeWin('win-settings')">✖</span></div>
+        <div class="window-body">
+            <h3>System Control</h3>
+            <button onclick="exportData()">Export JSON</button>
+            <button onclick="resetSystem()" style="background: #ef4444;">Reset OS</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initial State
+    let state = JSON.parse(localStorage.getItem('nexus_os_data')) || {
+        settings: { companyName: "Nexus OS", theme: "dark" },
+        clients: [],
+        employees: [],
+        tasks: [],
+        timeLogs: []
+    };
+
+    function save() {
+        localStorage.setItem('nexus_os_data', JSON.stringify(state));
+        renderAll();
+    }
+
+    // Window Management
+    function openWindow(id) {
+        const win = document.getElementById(id);
+        win.style.display = 'flex';
+        win.style.zIndex = parseInt(new Date().getTime() / 1000);
+    }
+
+    function closeWin(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    // Dashboard Logic
+    function renderDash() {
+        const dash = document.getElementById('dash-content');
+        dash.innerHTML = `
+            <div class="card-grid">
+                <div class="stat-card"><h3>${state.clients.length}</h3><p>Active Clients</p></div>
+                <div class="stat-card"><h3>${state.employees.length}</h3><p>Team Members</p></div>
+                <div class="stat-card"><h3>${state.tasks.filter(t => t.status !== 'Done').length}</h3><p>Open Tasks</p></div>
+                <div class="stat-card"><h3>${state.timeLogs.length}</h3><p>Total Logs</p></div>
+            </div>
+        `;
+    }
+
+    // Table Rendering
+    function renderAll() {
+        renderDash();
+        
+        // Clients
+        const ct = document.getElementById('client-table');
+        ct.innerHTML = `<tr><th>Name</th><th>Company</th><th>Status</th></tr>` + 
+            state.clients.map(c => `<tr><td>${c.name}</td><td>${c.company}</td><td>${c.status}</td></tr>`).join('');
+
+        // Employees
+        const et = document.getElementById('employee-table');
+        et.innerHTML = `<tr><th>Name</th><th>Role</th><th>Status</th></tr>` + 
+            state.employees.map(e => `<tr><td>${e.name}</td><td>${e.role}</td><td>${e.status}</td></tr>`).join('');
+
+        // Tasks
+        const tt = document.getElementById('task-table');
+        tt.innerHTML = `<tr><th>Task</th><th>Priority</th><th>Status</th></tr>` + 
+            state.tasks.map(t => `<tr><td>${t.title}</td><td>${t.priority}</td><td>${t.status}</td></tr>`).join('');
+            
+        // Reports
+        const rep = document.getElementById('reports-content');
+        rep.innerHTML = `<h4>Summary</h4><p>Total Workload: ${state.tasks.length} tasks across ${state.clients.length} clients.</p>`;
+    }
+
+    // Clock
+    setInterval(() => {
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+    }, 1000);
+
+    // Initial load
+    renderAll();
+
+    // Export & Reset
+    function exportData() {
+        const blob = new Blob([JSON.stringify(state)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'nexus_backup.json';
+        a.click();
+    }
+
+    function resetSystem() {
+        if(confirm("Delete all data?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // Draggable Windows (Basic Implementation)
+    document.querySelectorAll('.window-header').forEach(header => {
+        header.onmousedown = function(e) {
+            let win = header.parentElement;
+            let shiftX = e.clientX - win.getBoundingClientRect().left;
+            let shiftY = e.clientY - win.getBoundingClientRect().top;
+
+            function moveAt(pageX, pageY) {
+                win.style.left = pageX - shiftX + 'px';
+                win.style.top = pageY - shiftY + 'px';
+            }
+
+            function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
+            document.addEventListener('mousemove', onMouseMove);
+            header.onmouseup = function() {
+                document.removeEventListener('mousemove', onMouseMove);
+                header.onmouseup = null;
+            };
+        };
+    });
+</script>
+
+</body>
+</html>
